@@ -55,12 +55,10 @@ def main():
     for day in range(5):  # 5 times for each day of the week
         day_list = combine_day(day, times)
         while len(day_list) > 1:
-            ret = earliest_free(day_list)
-            free_range = (ret['start'][1], ret['end'][0])
-            next_index = ret['next']
-            if next_index != -1:
-                times['free'].add_time(free_range, day)
-            day_list = day_list[next_index:]
+            free_time = earliest_free(day_list)
+            if free_time is not None:
+                times['free'].add_time(free_time, day)
+            day_list = day_list[1:]
     print('done')
 
 
@@ -75,18 +73,13 @@ def combine_day(day, times):
 
 
 def earliest_free(day_list):
-    cur_end = (0, 0)
-    cur_start = day_list[0]
-    next_index = -1
-    for index, cur_time in enumerate(day_list[1:]):
-        if cur_start[1] > cur_time[0]:
-            cur_start = cur_time
-            cur_end = day_list[index + 1]
-            next_index = index + 1
-    if cur_start == day_list[0]:  # if free time is after event 1 it wont trip the for loop condition
-        next_index = 1
-        cur_end = day_list[1]
-    return {'start': cur_start, 'end': cur_end, 'next': next_index}
+    start = day_list[0]
+    for index, cur in enumerate(day_list[1:]):
+        if start[1] < cur[0]:
+            return start[1], cur[0]
+        else:
+            start = cur
+    return None
 
 
 def parse_cal(file, times):
