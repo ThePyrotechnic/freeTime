@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, glob, os, argparse
+import sys, glob, os, argparse, datetime
 
 
 class Cal:
@@ -57,8 +57,22 @@ def main():
         while len(day_list) > 1:
             free_time = earliest_free(day_list)
             if free_time is not None:
-                times['free'].add_time(free_time, day)
+                if free_time not in times['free'].fri:
+                    times['free'].add_time(free_time, day)
             day_list = day_list[1:]
+
+    # TODO decide what date to use
+
+    free_cal = open('freetime.ics', 'w')  # Create iCal file
+    for index, cur_day in enumerate(times['free'].days):
+        for time in cur_day:
+            if time is not None:
+                free_cal.write('BEGIN:VEVENT\n'
+                               'DTSTART;TZID=America/New_York:20160902T' + str(time[0]) + '\n' +
+                               'DTEND;TZID=America/New_York:20160902T' + str(time[1]) + '\n' +
+                               'RRULE:FREQ=WEEKLY' + '\n' +
+                               'END:VEVENT' + '\n\n')
+    free_cal.close()
     print('done')
 
 
