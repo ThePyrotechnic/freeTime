@@ -45,9 +45,9 @@ def main():
     parser.add_argument('-d', '--directory', metavar='directory', default='', help='Directory to look for iCal files.')
     parser.add_argument('-b', '--buffer', metavar='buffer', type=int, default=5,
                         help='Buffer between events, in minutes.')
-    parser.add_argument('-s', '--starttime', metavar='starttime', type=int, default=700,  # TODO
+    parser.add_argument('-s', '--starttime', metavar='starttime', type=int, default=70000,  # TODO
                         help='Start of free time. 24H format')
-    parser.add_argument('-e', '--endtime', metavar='endtime', type=int, default=2400,  # TODO
+    parser.add_argument('-e', '--endtime', metavar='endtime', type=int, default=240000,  # TODO
                         help='End of free time. 24H format')
     parser.add_argument('-m', '--mintime', metavar='mintime', type=int, default=30,
                         help='Min amount of free time between events')
@@ -68,6 +68,7 @@ def main():
 
     for day in range(5):  # 5 times for each day of the week
         day_list = combine_day(day, times)
+        add_freetime_caps(day_list, day, args.starttime, args.endtime, times['free'])
         while len(day_list) > 1:
             free_time = parse_range(earliest_free(day_list), buffer, min_time)
             if free_time is not None:
@@ -138,7 +139,7 @@ def combine_day(day, times):
         if len(cur_cal.days[day]) > 0:
             for cur_time in cur_cal.days[day]:
                 day_list.append(cur_time)
-                day_list.sort()
+    day_list.sort()
     return day_list
 
 
@@ -257,6 +258,14 @@ def parse_range(time_range, buffer, min_time):
         return t1, t2
     else:
         return None
+
+
+def add_freetime_caps(day_list, day, starttime, endtime, free_cal):
+    if len(day_list) > 0:
+        if starttime < day_list[0][0]:  # TODO use time objects
+            free_cal.add_time((starttime, day_list[0][0]), day)
+        if endtime > day_list[-1][1]:
+            free_cal.add_time((day_list[-1][1], endtime), day)
 
 
 if __name__ == '__main__':
