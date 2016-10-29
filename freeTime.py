@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
+import argparse
 import glob
 import os
-import argparse
 from datetime import timedelta
 
 
@@ -60,7 +60,7 @@ def main():
     times = {'free': Cal()}
     for file in glob.glob('*.ics'):
         times[file.title()] = Cal()
-        ret = parse_cal(file, times, buffer, min_time)
+        ret = parse_cal(file, times)
         if ret is not None:
             start_date = ret[0]
             end_date = ret[1]
@@ -68,7 +68,7 @@ def main():
 
     for day in range(5):  # 5 times for each day of the week
         day_list = combine_day(day, times)
-        add_freetime_caps(day_list, day, args.starttime, args.endtime, times['free'])
+        add_freetime_caps(day_list, day, args.starttime, args.endtime, buffer, min_time, times['free'])
         while len(day_list) > 1:
             free_time = parse_range(earliest_free(day_list), buffer, min_time)
             if free_time is not None:
@@ -77,50 +77,51 @@ def main():
             day_list = day_list[1:]
 
     free_cal = open('freetime.ics', 'w')  # Create iCal file
-    free_cal .write('BEGIN:VCALENDAR\n'
-                    'PRODID:-//FREETIME\n'
-                    'VERSION:2.0\n'
-                    'CALSCALE:GREGORIAN\n'
-                    'METHOD:PUBLISH\n'
-                    'X-WR-CALNAME:Free Time\n'
-                    'X-WR-TIMEZONE:America/New_York\n'
-                    'X-WR-CALDESC:Free time between given schedules\n'
-                    'BEGIN:VTIMEZONE\n'
-                    'TZID:America/New_York\n'
-                    'X-LIC-LOCATION:America/New_York\n'
-                    'BEGIN:DAYLIGHT\n'
-                    'TZOFFSETFROM:-0500\n'
-                    'TZOFFSETTO:-0400\n'
-                    'TZNAME:EDT\n'
-                    'DTSTART:19700308T020000\n'
-                    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\n'
-                    'END:DAYLIGHT\n'
-                    'BEGIN:STANDARD\n'
-                    'TZOFFSETFROM:-0400\n'
-                    'TZOFFSETTO:-0500\n'
-                    'TZNAME:EST\n'
-                    'DTSTART:19701101T020000\n'
-                    'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\n'
-                    'END:STANDARD\n'
-                    'END:VTIMEZONE\n\n')
+    free_cal.write('BEGIN:VCALENDAR\n'
+                   'PRODID:-//FREETIME\n'
+                   'VERSION:2.0\n'
+                   'CALSCALE:GREGORIAN\n'
+                   'METHOD:PUBLISH\n'
+                   'X-WR-CALNAME:Free Time\n'
+                   'X-WR-TIMEZONE:America/New_York\n'
+                   'X-WR-CALDESC:Free time between given schedules\n'
+                   'BEGIN:VTIMEZONE\n'
+                   'TZID:America/New_York\n'
+                   'X-LIC-LOCATION:America/New_York\n'
+                   'BEGIN:DAYLIGHT\n'
+                   'TZOFFSETFROM:-0500\n'
+                   'TZOFFSETTO:-0400\n'
+                   'TZNAME:EDT\n'
+                   'DTSTART:19700308T020000\n'
+                   'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\n'
+                   'END:DAYLIGHT\n'
+                   'BEGIN:STANDARD\n'
+                   'TZOFFSETFROM:-0400\n'
+                   'TZOFFSETTO:-0500\n'
+                   'TZNAME:EST\n'
+                   'DTSTART:19701101T020000\n'
+                   'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\n'
+                   'END:STANDARD\n'
+                   'END:VTIMEZONE\n\n')
 
     for index, cur_day in enumerate(times['free'].days):
         for time in cur_day:
             if time is not None:  # TODO simplify this
-                if len(str(time[0])) < 8:
-                    start_time = str(time[0])
-                else:
+                if len(str(time[0])) < 6:
                     start_time = '0' + str(time[0])
-
-                if len(str(time[1])) < 8:
-                    end_time = str(time[1])
                 else:
+                    start_time = str(time[0])
+
+                if len(str(time[1])) < 6:
                     end_time = '0' + str(time[1])
+                else:
+                    end_time = str(time[1])
 
                 free_cal.write('BEGIN:VEVENT\n'
                                'DTSTART;TZID=' + tzid + ':' + start_date + 'T' + start_time + '\n' +
                                'DTEND;TZID=' + tzid + ':' + start_date + 'T' + end_time + '\n' +
                                'RRULE:FREQ=WEEKLY;UNTIL=' + end_date + 'T000000Z;BYDAY=' + convert_day(index) + '\n' +
+                               'SUMMARY:Free Time\n' +
                                'END:VEVENT' + '\n\n')
     free_cal.write('END:VCALENDAR')
     free_cal.close()
@@ -158,14 +159,12 @@ def earliest_free(day_list):
     return None
 
 
-def parse_cal(file, times, buffer, min_time):
+def parse_cal(file, times):
     """
     extracts the start/end times from a given calendar file
     and stores each calendars' info in a dictionary by file name
     :param file: the calendar file
     :param times: the list of calendar objects
-    :param buffer: how much time to pad free intervals with
-    :param min_time: the minimum length a free interval must be to be valid
     :return: the extracted time zone, start date of this schedule, and end date, or none if already returned.
                 right now the program assumes it is the same for each schedule given
     """
@@ -229,8 +228,9 @@ def parse_range(time_range, buffer, min_time):
         t1_val = '0' + str(time_range[0])
     else:
         t1_val = str(time_range[0])
+
     if len(str(time_range[1])) < 6:
-        t2_val = '0' + str(time_range[0])
+        t2_val = '0' + str(time_range[1])
     else:
         t2_val = str(time_range[1])
 
@@ -238,21 +238,27 @@ def parse_range(time_range, buffer, min_time):
                    hours=int(t1_val[0:2]))
     t2 = timedelta(seconds=int(t2_val[4:]), minutes=int(t2_val[2:4]) - buffer,
                    hours=int(t2_val[0:2]))
-    if(t2 - t1).seconds >= min_time * 60:  # TODO loop this?
+    if (t2 - t1).seconds >= min_time * 60:  # TODO loop this?
         hours, remainder = divmod(t1.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
-        if len(str(hours)) < 2: hours = '0' + str(hours)
-        if len(str(minutes)) < 2: minutes = '0' + str(minutes)
-        if len(str(seconds)) < 2: seconds = '0' + str(seconds)
+        if len(str(hours)) < 2:
+            hours = '0' + str(hours)
+        if len(str(minutes)) < 2:
+            minutes = '0' + str(minutes)
+        if len(str(seconds)) < 2:
+            seconds = '0' + str(seconds)
         t1 = int('{}{}{}'.format(hours, minutes, seconds))
 
         hours, remainder = divmod(t2.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
-        if len(str(hours)) < 2: hours = '0' + str(hours)
-        if len(str(minutes)) < 2: minutes = '0' + str(minutes)
-        if len(str(seconds)) < 2: seconds = '0' + str(seconds)
+        if len(str(hours)) < 2:
+            hours = '0' + str(hours)
+        if len(str(minutes)) < 2:
+            minutes = '0' + str(minutes)
+        if len(str(seconds)) < 2:
+            seconds = '0' + str(seconds)
         t2 = int('{}{}{}'.format(hours, minutes, seconds))
 
         return t1, t2
@@ -260,12 +266,25 @@ def parse_range(time_range, buffer, min_time):
         return None
 
 
-def add_freetime_caps(day_list, day, starttime, endtime, free_cal):
+def add_freetime_caps(day_list, day, starttime, endtime, buffer, min_time, free_cal):
+    """
+    Adds free time values for the beginning and end of each day (the "caps" on top and bottom)
+    :param day_list: The list of free times for each day
+    :param day: The day in question
+    :param starttime: The minimum allowed start time
+    :param endtime: The maximum allowed end time
+    :param buffer: the buffer added on the start and end of all free times
+    :param min_time: the minimum amount of time considered free
+    :param free_cal: the calendar to add the resulting times to
+    :return: None
+    """
     if len(day_list) > 0:
         if starttime < day_list[0][0]:  # TODO use time objects
-            free_cal.add_time((starttime, day_list[0][0]), day)
+            free_cal.add_time(parse_range((starttime, day_list[0][0]), buffer, min_time), day)
         if endtime > day_list[-1][1]:
-            free_cal.add_time((day_list[-1][1], endtime), day)
+            free_cal.add_time(parse_range((day_list[-1][1], endtime), buffer, min_time), day)
+    else:
+        free_cal.add_time(parse_range((starttime, endtime), buffer, min_time), day)
 
 
 if __name__ == '__main__':
