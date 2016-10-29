@@ -34,38 +34,42 @@ class Cal:
 
 
 def main():
-    start_date = None  # TODO Better way of determining this
-    end_date = None
-    tzid = None
 
     parser = argparse.ArgumentParser(
         description='Takes iCal files, finds a weekly schedule, and returns the free time shared between all files.',
         prog='freeTime',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-d', '--directory', metavar='directory', default='', help='Directory to look for iCal files.')
+    parser.add_argument('-d', '--directory', metavar='directory', type=str, default=os.getcwd(), help='Directory to look for iCal files.')
     parser.add_argument('-b', '--buffer', metavar='buffer', type=int, default=5,
                         help='Buffer between events, in minutes.')
-    parser.add_argument('-s', '--starttime', metavar='starttime', type=int, default=70000,  # TODO
-                        help='Start of free time. 24H format')
-    parser.add_argument('-e', '--endtime', metavar='endtime', type=int, default=240000,  # TODO
-                        help='End of free time. 24H format')
+    parser.add_argument('-s', '--starttime', metavar='starttime', type=int, default=70000,
+                        help='Start of free time. (HHMMSS)')
+    parser.add_argument('-e', '--endtime', metavar='endtime', type=int, default=240000,
+                        help='End of free time. (HHMMSS)')
     parser.add_argument('-m', '--mintime', metavar='mintime', type=int, default=30,
                         help='Min amount of free time between events')
+    parser.add_argument('-n', '--filename', metavar='filename', type=str, default='freetime',
+                        help='Name of output file (Omit file extension)')
     # parser.print_help()
     args = parser.parse_args()
     buffer = args.buffer
     min_time = args.mintime
 
+    print(os.getcwd())
     os.chdir(args.directory)
     times = {'free': Cal()}
+
+    ret = None
     for file in glob.glob('*.ics'):
         times[file.title()] = Cal()
         ret = parse_cal(file, times)
-        if ret is not None:
-            start_date = ret[0]
-            end_date = ret[1]
-            tzid = ret[2]
-
+    if ret is not None:
+        start_date = ret[0]
+        end_date = ret[1]
+        tzid = ret[2]
+    else:
+        print('No .ics files found in ' + '(' + args.directory + ')')
+        return
     for day in range(5):  # 5 times for each day of the week
         day_list = combine_day(day, times)
         add_freetime_caps(day_list, day, args.starttime, args.endtime, buffer, min_time, times['free'])
@@ -76,7 +80,7 @@ def main():
                     times['free'].add_time(free_time, day)
             day_list = day_list[1:]
 
-    free_cal = open('freetime.ics', 'w')  # Create iCal file
+    free_cal = open(args.filename + '.ics', 'w')  # Create iCal file
     free_cal.write('BEGIN:VCALENDAR\n'
                    'PRODID:-//FREETIME\n'
                    'VERSION:2.0\n'
@@ -125,7 +129,7 @@ def main():
                                'END:VEVENT' + '\n\n')
     free_cal.write('END:VCALENDAR')
     free_cal.close()
-    print('done')
+    print('Done. Free time calendar created at ' + args.directory + '\\' + args.filename + '.ics')
 
 
 def combine_day(day, times):
