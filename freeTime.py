@@ -3,6 +3,7 @@
 import argparse
 import glob
 import os
+import sys
 from datetime import timedelta
 
 
@@ -69,7 +70,7 @@ def main():
         tzid = ret[2]
     else:
         print('No .ics files found in ' + '(' + args.directory + ')')
-        return
+        sys.exit(10)
     for day in range(5):  # 5 times for each day of the week
         day_list = combine_day(day, times)
         add_freetime_caps(day_list, day, args.starttime, args.endtime, buffer, min_time, times['free'])
@@ -80,7 +81,10 @@ def main():
                     times['free'].add_time(free_time, day)
             day_list = day_list[1:]
 
-    free_cal = open(args.filename + '.ics', 'w')  # Create iCal file
+    try:
+        free_cal = open(args.filename + '.ics', 'w')  # Create iCal file
+    except PermissionError:
+        sys.exit(11)
     free_cal.write('BEGIN:VCALENDAR\n'
                    'PRODID:-//FREETIME\n'
                    'VERSION:2.0\n'
@@ -293,3 +297,4 @@ def add_freetime_caps(day_list, day, starttime, endtime, buffer, min_time, free_
 
 if __name__ == '__main__':
     main()
+    sys.exit(0)
