@@ -35,7 +35,6 @@ class Cal:
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description='Takes iCal files, finds a weekly schedule, and returns the free time shared between all files.',
         prog='freeTime',
@@ -75,7 +74,7 @@ def main():
         day_list = combine_day(day, times)
         add_freetime_caps(day_list, day, args.starttime, args.endtime, buffer, min_time, times['free'])
         while len(day_list) > 1:
-            free_time = parse_range(earliest_free(day_list), buffer, min_time)
+            free_time = parse_range(earliest_free(day_list), buffer, min_time, args.endtime)
             if free_time is not None:
                 if free_time not in times['free'].fri:
                     times['free'].add_time(free_time, day)
@@ -221,7 +220,7 @@ def convert_day(num):
         return days[num]
 
 
-def parse_range(time_range, buffer, min_time):
+def parse_range(time_range, buffer, min_time, endtime):
     """
     checks if a time range meets the minimum req. and adds the buffer
     :param time_range: the range to parse
@@ -242,10 +241,21 @@ def parse_range(time_range, buffer, min_time):
     else:
         t2_val = str(time_range[1])
 
+    if len(str(endtime)) < 6:
+        endtime = '0' + str(endtime)
+    else:
+        endtime = str(endtime)
+
     t1 = timedelta(seconds=int(t1_val[4:]), minutes=int(t1_val[2:4]) + buffer,
                    hours=int(t1_val[0:2]))
     t2 = timedelta(seconds=int(t2_val[4:]), minutes=int(t2_val[2:4]) - buffer,
                    hours=int(t2_val[0:2]))
+    end = timedelta(seconds=int(endtime[4:]), minutes=int(endtime[2:4]),
+                    hours=int(endtime[0:2]))
+    if t1 > t2:  # buffer may cause time to become invalid
+        return None
+    if t2 > end:  # if  range extends past the end time then throw it out
+        return None
     if (t2 - t1).seconds >= min_time * 60:  # TODO loop this?
         hours, remainder = divmod(t1.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -288,11 +298,11 @@ def add_freetime_caps(day_list, day, starttime, endtime, buffer, min_time, free_
     """
     if len(day_list) > 0:
         if starttime < day_list[0][0]:  # TODO use time objects
-            free_cal.add_time(parse_range((starttime, day_list[0][0]), buffer, min_time), day)
+            free_cal.add_time(parse_range((starttime, day_list[0][0]), buffer, min_time, endtime), day)
         if endtime > day_list[-1][1]:
-            free_cal.add_time(parse_range((day_list[-1][1], endtime), buffer, min_time), day)
+            free_cal.add_time(parse_range((day_list[-1][1], endtime), buffer, min_time, endtime), day)
     else:
-        free_cal.add_time(parse_range((starttime, endtime), buffer, min_time), day)
+        free_cal.add_time(parse_range((starttime, endtime), buffer, min_time, endtime), day)
 
 
 if __name__ == '__main__':
