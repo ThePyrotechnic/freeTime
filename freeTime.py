@@ -226,6 +226,7 @@ def parse_range(time_range, buffer, min_time, endtime):
     :param time_range: the range to parse
     :param buffer: how much time to pad the interval with
     :param min_time: the minimum length that the interval must be to be valid
+    :param endtime: the latest allowed free time
     :return: the range if valid, null otherwise
     """
     if time_range is None:
