@@ -297,12 +297,18 @@ def add_freetime_caps(day_list, day, starttime, endtime, buffer, min_time, free_
     :return: None
     """
     if len(day_list) > 0:
-        if starttime < day_list[0][0]:  # TODO use time objects
-            free_cal.add_time(parse_range((starttime, day_list[0][0]), buffer, min_time, endtime), day)
+        if starttime < day_list[0][0]:
+            new_range = parse_range((starttime, day_list[0][0]), buffer, min_time, endtime)
+            if new_range is not None:
+                free_cal.add_time(new_range, day)
         if endtime > day_list[-1][1]:
-            free_cal.add_time(parse_range((day_list[-1][1], endtime), buffer, min_time, endtime), day)
+            new_range = parse_range((day_list[-1][1], endtime), buffer, min_time, endtime)
+            if new_range is not None:
+                free_cal.add_time(new_range, day)
     else:
-        free_cal.add_time(parse_range((starttime, endtime), buffer, min_time, endtime), day)
+        new_range = parse_range((starttime, endtime), buffer, min_time, endtime)
+        if new_range is not None:
+            free_cal.add_time(new_range, day)
 
 
 if __name__ == '__main__':
